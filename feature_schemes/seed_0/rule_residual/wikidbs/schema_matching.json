@@ -1,0 +1,14 @@
+{
+  "task": "schema_matching",
+  "version": 1,
+  "selected_features": ["s_prior", "uncertainty", "src_degree", "dst_degree", "degree_ratio"],
+  "rules": [
+  {"id": "sm_mid_uncertain", "if": [["uncertainty", ">=", 0.55], ["uncertainty", "<=", 0.90]], "delta": 0.05},
+  {"id": "sm_low_prior", "if": [["s_prior", "<=", 0.30], ["degree_ratio", "<=", 0.25]], "delta": -0.07}
+],
+  "delta_policy": {
+    "scale_init": 1.0,
+    "bias_init": 0.0,
+    "delta_clip": 0.35
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "task": "schema_matching",
+  "scope": "column_pair",
+  "version": "v1",
+  "notes": "Fixed SM exemplar atoms rewritten in generated-feature format to guide LLM atom generation.",
+  "features": [
+    {
+      "feature_name": "sm_header_token_jaccard_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: token Jaccard overlap between normalized headers.",
+      "inputs_used": [
+        "stats_a.header_tokens",
+        "stats_b.header_tokens",
+        "helpers.token_jaccard"
+      ],
+      "example_based_on": [
+        "header_token_jaccard"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"token_jaccard\"](list(stats_a[\"header_tokens\"]), list(stats_b[\"header_tokens\"]))\n"
+    },
+    {
+      "feature_name": "sm_header_edit_similarity_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: normalized edit similarity between header texts.",
+      "inputs_used": [
+        "stats_a.header_text",
+        "stats_b.header_text",
+        "helpers.normalized_edit_similarity"
+      ],
+      "example_based_on": [
+        "header_edit_similarity"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"normalized_edit_similarity\"](stats_a[\"header_text\"], stats_b[\"header_text\"])\n"
+    },
+    {
+      "feature_name": "sm_value_jaccard_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: Jaccard overlap of normalized value sets.",
+      "inputs_used": [
+        "stats_a.value_set",
+        "stats_b.value_set",
+        "helpers.set_jaccard"
+      ],
+      "example_based_on": [
+        "value_jaccard"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"set_jaccard\"](stats_a[\"value_set\"], stats_b[\"value_set\"])\n"
+    },
+    {
+      "feature_name": "sm_value_containment_max_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: maximum directional containment between normalized value sets.",
+      "inputs_used": [
+        "stats_a.value_set",
+        "stats_b.value_set"
+      ],
+      "example_based_on": [
+        "value_containment_max"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    values_a = stats_a[\"value_set\"]\n    values_b = stats_b[\"value_set\"]\n    inter = len(values_a.intersection(values_b))\n    contain_a = float(inter) / float(len(values_a)) if len(values_a) > 0 else 0.0\n    contain_b = float(inter) / float(len(values_b)) if len(values_b) > 0 else 0.0\n    if contain_b > contain_a:\n        return contain_b\n    return contain_a\n"
+    },
+    {
+      "feature_name": "sm_unique_ratio_sim_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity of uniqueness ratios between two columns.",
+      "inputs_used": [
+        "stats_a.unique_ratio",
+        "stats_b.unique_ratio",
+        "helpers.safe_ratio_float"
+      ],
+      "example_based_on": [
+        "unique_ratio_sim"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"safe_ratio_float\"](stats_a[\"unique_ratio\"], stats_b[\"unique_ratio\"])\n"
+    },
+    {
+      "feature_name": "sm_missing_ratio_sim_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity of observed-value rates derived from missing ratios.",
+      "inputs_used": [
+        "stats_a.missing_ratio",
+        "stats_b.missing_ratio",
+        "helpers.safe_ratio_float"
+      ],
+      "example_based_on": [
+        "missing_ratio_sim"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"safe_ratio_float\"](1.0 - stats_a[\"missing_ratio\"], 1.0 - stats_b[\"missing_ratio\"])\n"
+    },
+    {
+      "feature_name": "sm_numeric_ratio_sim_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity of numeric-value fractions.",
+      "inputs_used": [
+        "stats_a.numeric_ratio",
+        "stats_b.numeric_ratio",
+        "helpers.safe_ratio_float"
+      ],
+      "example_based_on": [
+        "numeric_ratio_sim"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"safe_ratio_float\"](stats_a[\"numeric_ratio\"], stats_b[\"numeric_ratio\"])\n"
+    },
+    {
+      "feature_name": "sm_avg_len_ratio_sim_example",
+      "task": "schema_matching",
+      "scope": "column_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity of average normalized string lengths.",
+      "inputs_used": [
+        "stats_a.avg_len",
+        "stats_b.avg_len",
+        "helpers.safe_ratio_float"
+      ],
+      "example_based_on": [
+        "avg_len_ratio_sim"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"safe_ratio_float\"](stats_a[\"avg_len\"], stats_b[\"avg_len\"])\n"
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "task": "union_table_search",
+  "scope": "table_pair",
+  "version": "v1",
+  "notes": "Fixed UTS exemplar atoms rewritten in generated-feature format to guide LLM atom generation.",
+  "features": [
+    {
+      "feature_name": "uts_col_overlap_a2b_mean_example",
+      "task": "union_table_search",
+      "scope": "table_pair",
+      "version": "v1",
+      "description": "Example fixed feature: mean best overlap from source columns to target columns.",
+      "inputs_used": [
+        "stats_a.column_value_sets",
+        "stats_b.column_value_sets",
+        "helpers.set_jaccard"
+      ],
+      "example_based_on": [
+        "col_overlap_a2b_mean"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    cols_a = stats_a[\"column_value_sets\"]\n    cols_b = stats_b[\"column_value_sets\"]\n    total = 0.0\n    used = 0\n    for values_a in cols_a:\n        best = 0.0\n        for values_b in cols_b:\n            score = helpers[\"set_jaccard\"](values_a, values_b)\n            if score > best:\n                best = score\n        total += best\n        used += 1\n    return float(total) / float(used) if used > 0 else 0.0\n"
+    },
+    {
+      "feature_name": "uts_header_jaccard_example",
+      "task": "union_table_search",
+      "scope": "table_pair",
+      "version": "v1",
+      "description": "Example fixed feature: token Jaccard overlap between aggregate header token sets.",
+      "inputs_used": [
+        "stats_a.header_tokens",
+        "stats_b.header_tokens",
+        "helpers.token_jaccard"
+      ],
+      "example_based_on": [
+        "header_jaccard"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"token_jaccard\"](list(stats_a[\"header_tokens\"]), list(stats_b[\"header_tokens\"]))\n"
+    },
+    {
+      "feature_name": "uts_col_count_ratio_example",
+      "task": "union_table_search",
+      "scope": "table_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity of table column counts.",
+      "inputs_used": [
+        "stats_a.num_cols",
+        "stats_b.num_cols",
+        "helpers.safe_ratio_float"
+      ],
+      "example_based_on": [
+        "col_count_ratio"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"safe_ratio_float\"](stats_a[\"num_cols\"], stats_b[\"num_cols\"])\n"
+    },
+    {
+      "feature_name": "uts_row_count_ratio_example",
+      "task": "union_table_search",
+      "scope": "table_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity of table row counts.",
+      "inputs_used": [
+        "stats_a.num_rows",
+        "stats_b.num_rows",
+        "helpers.safe_ratio_float"
+      ],
+      "example_based_on": [
+        "row_count_ratio"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"safe_ratio_float\"](stats_a[\"num_rows\"], stats_b[\"num_rows\"])\n"
+    }
+  ]
+}

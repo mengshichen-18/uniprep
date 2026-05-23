@@ -1,0 +1,20 @@
+{
+  "spec_version": "v1",
+  "task": "entity_matching",
+  "feature_pool_used": [
+    "embedding_similarity",
+    "row_value_overlap",
+    "row_profile"
+  ],
+  "expression": "clip(sigmoid(avg(embedding_similarity, row_value_overlap, row_profile)), 0.0, 1.0)",
+  "output_name": "sym_feature_em_v1",
+  "output_range_hint": [
+    0.0,
+    1.0
+  ],
+  "decision": {
+    "threshold": 0.5,
+    "positive_if": ">="
+  },
+  "notes": "template"
+}

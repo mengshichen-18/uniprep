@@ -1,0 +1,194 @@
+{
+  "task": "entity_matching",
+  "scope": "row_pair",
+  "version": "v1",
+  "notes": "Fixed EM features preserved from checkpoint 02, rewritten in the generated-feature function format to guide LLM code generation.",
+  "features": [
+    {
+      "feature_name": "row_value_jaccard_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: Jaccard overlap of normalized row value sets.",
+      "inputs_used": [
+        "stats_a.value_set",
+        "stats_b.value_set"
+      ],
+      "example_based_on": [
+        "row_value_jaccard"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    set_a = stats_a[\"value_set\"]\n    set_b = stats_b[\"value_set\"]\n    if not set_a and not set_b:\n        return 0.0\n    inter_size = len(set_a.intersection(set_b))\n    union_size = len(set_a.union(set_b))\n    if union_size <= 0:\n        return 0.0\n    return float(inter_size) / float(union_size)\n"
+    },
+    {
+      "feature_name": "row_nonempty_ratio_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity of non-empty cell counts.",
+      "inputs_used": [
+        "stats_a.nonempty_count",
+        "stats_b.nonempty_count",
+        "helpers.safe_ratio_float"
+      ],
+      "example_based_on": [
+        "row_nonempty_ratio"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"safe_ratio_float\"](stats_a[\"nonempty_count\"], stats_b[\"nonempty_count\"])\n"
+    },
+    {
+      "feature_name": "row_serial_token_jaccard_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: token Jaccard on serialized row text.",
+      "inputs_used": [
+        "stats_a.serial_token_set",
+        "stats_b.serial_token_set",
+        "helpers.token_jaccard"
+      ],
+      "example_based_on": [
+        "row_serial_token_jaccard"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"token_jaccard\"](list(stats_a[\"serial_token_set\"]), list(stats_b[\"serial_token_set\"]))\n"
+    },
+    {
+      "feature_name": "row_serial_edit_similarity_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: normalized edit similarity on serialized row text.",
+      "inputs_used": [
+        "stats_a.serial_text",
+        "stats_b.serial_text",
+        "helpers.normalized_edit_similarity"
+      ],
+      "example_based_on": [
+        "row_serial_edit_similarity"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"normalized_edit_similarity\"](stats_a[\"serial_text\"], stats_b[\"serial_text\"])\n"
+    },
+    {
+      "feature_name": "row_numeric_value_overlap_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: overlap of row-level numeric value sets.",
+      "inputs_used": [
+        "stats_a.numeric_value_set",
+        "stats_b.numeric_value_set",
+        "helpers.numeric_overlap_max"
+      ],
+      "example_based_on": [
+        "row_numeric_value_overlap"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"numeric_overlap_max\"](stats_a[\"numeric_value_set\"], stats_b[\"numeric_value_set\"])\n"
+    },
+    {
+      "feature_name": "row_value_containment_max_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: max directional containment between normalized row value sets.",
+      "inputs_used": [
+        "stats_a.value_set",
+        "stats_b.value_set"
+      ],
+      "example_based_on": [
+        "row_value_containment_max"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    set_a = stats_a[\"value_set\"]\n    set_b = stats_b[\"value_set\"]\n    inter_size = len(set_a.intersection(set_b))\n    contain_a = float(inter_size) / float(len(set_a)) if len(set_a) > 0 else 0.0\n    contain_b = float(inter_size) / float(len(set_b)) if len(set_b) > 0 else 0.0\n    if contain_b > contain_a:\n        return contain_b\n    return contain_a\n"
+    },
+    {
+      "feature_name": "row_token_idf_jaccard_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: IDF-weighted Jaccard on row token sets, emphasizing rarer matching tokens.",
+      "inputs_used": [
+        "stats_a.token_set",
+        "stats_b.token_set",
+        "helpers.weighted_jaccard"
+      ],
+      "example_based_on": [
+        "row_token_idf_jaccard"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"weighted_jaccard\"](stats_a[\"token_set\"], stats_b[\"token_set\"])\n"
+    },
+    {
+      "feature_name": "row_header_token_jaccard_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: Jaccard overlap on header-aware value tokens, exposing whether similar content appears under similar fields.",
+      "inputs_used": [
+        "stats_a.header_value_token_set",
+        "stats_b.header_value_token_set",
+        "helpers.token_jaccard"
+      ],
+      "example_based_on": [
+        "row_header_token_jaccard"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    return helpers[\"token_jaccard\"](list(stats_a[\"header_value_token_set\"]), list(stats_b[\"header_value_token_set\"]))\n"
+    },
+    {
+      "feature_name": "row_numeric_rel_diff_sim_example",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Example fixed feature: similarity from relative median numeric difference.",
+      "inputs_used": [
+        "stats_a.numeric_median",
+        "stats_b.numeric_median"
+      ],
+      "example_based_on": [
+        "row_numeric_rel_diff_sim"
+      ],
+      "range_hint": [
+        0.0,
+        1.0
+      ],
+      "fallback_value": 0.0,
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    med_a = float(stats_a[\"numeric_median\"])\n    med_b = float(stats_b[\"numeric_median\"])\n    denom = max(abs(med_a), abs(med_b), 1.0)\n    rel = abs(med_a - med_b) / float(denom)\n    return 1.0 / (1.0 + rel)\n"
+    }
+  ]
+}

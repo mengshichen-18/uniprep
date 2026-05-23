@@ -1,0 +1,9 @@
+{
+  "task": "union_table_search",
+  "version": 1,
+  "selected_features": ["s_prior", "uncertainty", "src_degree", "dst_degree", "degree_ratio"],
+  "rules": [
+  {"id": "uts_balanced_degree", "if": [["degree_ratio", ">=", 0.50], ["s_prior", ">=", 0.50]], "delta": 0.07},
+  {"id": "uts_high_uncertain", "if": [["uncertainty", ">=", 0.80]], "delta": -0.04}
+]
+}

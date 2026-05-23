@@ -1,0 +1,191 @@
+{
+  "task": "entity_matching",
+  "scope": "row_pair",
+  "version": "v1",
+  "features": [
+    {
+      "feature_name": "row_header_serial_blend",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Blend header:value token overlap with serialized token overlap to capture schema-aware lexical agreement.",
+      "inputs_used": [
+        "stats_a.header_value_token_set",
+        "stats_b.header_value_token_set",
+        "stats_a.serial_token_set",
+        "stats_b.serial_token_set",
+        "helpers.token_jaccard",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    hv = helpers[\"token_jaccard\"](list(stats_a[\"header_value_token_set\"]), list(stats_b[\"header_value_token_set\"]))\n    serial = helpers[\"token_jaccard\"](list(stats_a[\"serial_token_set\"]), list(stats_b[\"serial_token_set\"]))\n    return helpers[\"clip01\"](0.6 * hv + 0.4 * serial)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_serial_token_jaccard",
+        "row_header_token_jaccard"
+      ],
+      "code_hash": "295b2ddd09a7a3b64e75845d0022fed898169e5ed3119c68ad756f3738e0c38b",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_density_median_agreement",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Couple row density similarity with numeric median agreement to reward structured rows with consistent numeric scale.",
+      "inputs_used": [
+        "stats_a.nonempty_count",
+        "stats_b.nonempty_count",
+        "stats_a.numeric_median",
+        "stats_b.numeric_median",
+        "helpers.safe_ratio_float",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    density = helpers[\"safe_ratio_float\"](stats_a[\"nonempty_count\"], stats_b[\"nonempty_count\"])\n    med_a = float(stats_a[\"numeric_median\"])\n    med_b = float(stats_b[\"numeric_median\"])\n    denom = max(abs(med_a), abs(med_b), 1.0)\n    rel = abs(med_a - med_b) / float(denom)\n    numeric = 1.0 / (1.0 + rel)\n    return helpers[\"clip01\"](0.5 * density + 0.5 * numeric)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_nonempty_ratio",
+        "row_numeric_rel_diff_sim"
+      ],
+      "code_hash": "0328735c0a60e38ecfb09dcf8689c7b602172a442e6f4a302250d35d58a498c8",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_numeric_set_overlap_bridge",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Blend numeric-set overlap with relative median similarity to reward rows that share numeric content and scale.",
+      "inputs_used": [
+        "stats_a.numeric_value_set",
+        "stats_b.numeric_value_set",
+        "stats_a.numeric_median",
+        "stats_b.numeric_median",
+        "helpers.numeric_overlap_max",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    overlap = helpers[\"numeric_overlap_max\"](stats_a[\"numeric_value_set\"], stats_b[\"numeric_value_set\"])\n    med_a = float(stats_a[\"numeric_median\"])\n    med_b = float(stats_b[\"numeric_median\"])\n    denom = max(abs(med_a), abs(med_b), 1.0)\n    rel = abs(med_a - med_b) / float(denom)\n    median_sim = 1.0 / (1.0 + rel)\n    return helpers[\"clip01\"](0.55 * overlap + 0.45 * median_sim)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_numeric_value_overlap",
+        "row_numeric_rel_diff_sim"
+      ],
+      "code_hash": "4ac0ef30e99cacbe507711452c2895c694b3f81de6090abe4048bea597185a76",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_serial_edit_density_hybrid",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Combine serialized-row edit similarity with row density agreement to capture near-matches under small formatting drift.",
+      "inputs_used": [
+        "stats_a.serial_text",
+        "stats_b.serial_text",
+        "stats_a.nonempty_count",
+        "stats_b.nonempty_count",
+        "helpers.normalized_edit_similarity",
+        "helpers.safe_ratio_float",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    edit_sim = helpers[\"normalized_edit_similarity\"](stats_a[\"serial_text\"], stats_b[\"serial_text\"])\n    density = helpers[\"safe_ratio_float\"](stats_a[\"nonempty_count\"], stats_b[\"nonempty_count\"])\n    return helpers[\"clip01\"](0.65 * edit_sim + 0.35 * density)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_serial_edit_similarity",
+        "row_nonempty_ratio"
+      ],
+      "code_hash": "b18e1ade077ea56c679419b723558eca119759410c3b1900cc78c9c897f630aa",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_header_exact_token_agreement",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Use shared-header exactness together with header token overlap to capture schema-consistent row matches.",
+      "inputs_used": [
+        "stats_a.header_to_value",
+        "stats_b.header_to_value",
+        "stats_a.header_token_set",
+        "stats_b.header_token_set",
+        "helpers.token_jaccard",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    map_a = stats_a[\"header_to_value\"]\n    map_b = stats_b[\"header_to_value\"]\n    shared = list(set(map_a.keys()).intersection(set(map_b.keys())))\n    exact = 0.0\n    if shared:\n        match_count = 0\n        for key in shared:\n            if str(map_a.get(key, \"\")) == str(map_b.get(key, \"\")):\n                match_count += 1\n        exact = float(match_count) / float(len(shared))\n    header_tok = helpers[\"token_jaccard\"](list(stats_a[\"header_token_set\"]), list(stats_b[\"header_token_set\"]))\n    return helpers[\"clip01\"](0.6 * exact + 0.4 * header_tok)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_header_value_exact_ratio",
+        "row_header_jaccard"
+      ],
+      "code_hash": "86f46643af1bf41a4e06c291771ce8c9052066a5081f941dc2ace1d22267decb",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_chargram_token_bridge",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Bridge row token overlap with serialized 3-gram overlap to stabilize lexical evidence under spacing and ordering noise.",
+      "inputs_used": [
+        "stats_a.token_set",
+        "stats_b.token_set",
+        "stats_a.serial_text",
+        "stats_b.serial_text",
+        "helpers.token_jaccard",
+        "helpers.char_ngram_jaccard",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    tok = helpers[\"token_jaccard\"](list(stats_a[\"token_set\"]), list(stats_b[\"token_set\"]))\n    char3 = helpers[\"char_ngram_jaccard\"](stats_a[\"serial_text\"], stats_b[\"serial_text\"], 3)\n    return helpers[\"clip01\"](0.5 * tok + 0.5 * char3)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_token_jaccard",
+        "row_serial_char3_jaccard"
+      ],
+      "code_hash": "c9c429936a9af4c92bb623705c0ca97c6fbaa86661e22b7841d059d48e5d5c1a",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_embedding_numeric_bridge",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "v1",
+      "description": "Combine embedding similarity with numeric-scale agreement so semantic closeness is discounted when numeric signatures diverge strongly.",
+      "inputs_used": [
+        "emb_a",
+        "emb_b",
+        "stats_a.numeric_median",
+        "stats_b.numeric_median",
+        "helpers.cosine_similarity",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    emb_a = ctx[\"emb_a\"]\n    emb_b = ctx[\"emb_b\"]\n    helpers = ctx[\"helpers\"]\n    cosine = helpers[\"cosine_similarity\"](emb_a, emb_b)\n    cosine01 = helpers[\"clip01\"](0.5 * (cosine + 1.0))\n    med_a = float(stats_a[\"numeric_median\"])\n    med_b = float(stats_b[\"numeric_median\"])\n    denom = max(abs(med_a), abs(med_b), 1.0)\n    rel = abs(med_a - med_b) / float(denom)\n    numeric = 1.0 / (1.0 + rel)\n    return helpers[\"clip01\"](0.55 * cosine01 + 0.45 * numeric)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_emb_cosine",
+        "row_numeric_rel_diff_sim"
+      ],
+      "code_hash": "eda0be81c984643e72c36c6736089d5aaa76e0c82b402c6760f0619a00ebaa68",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    }
+  ]
+}
