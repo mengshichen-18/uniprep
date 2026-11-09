@@ -1,0 +1,35 @@
+# Local runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+logs/
+outputs/
+scores/
+checkpoints/
+*.log
+*.npy
+*.npz
+*.pt
+*.pth
+
+# Local data and editor settings
+data/
+*_no_token/
+.local-workspace/
+.vscode/
+.idea/
+.codex/
+.claude/
+.gemini/
+
+# Credentials
+.env
+.env.*
+!.env.example
+.deepseek_key
+.openai_key
+credentials.json
+api_keys.json
+*API_KEY*.md
+*.key
+*.pem

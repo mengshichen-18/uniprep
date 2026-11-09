@@ -1,0 +1,9 @@
+{
+  "task": "entity_matching",
+  "version": 1,
+  "selected_features": ["s_prior", "uncertainty", "src_degree", "dst_degree", "degree_ratio"],
+  "rules": [
+  {"id": "em_hi_uncertain", "if": [["uncertainty", ">=", 0.70], ["s_prior", ">=", 0.45]], "delta": 0.10},
+  {"id": "em_low_degree_ratio", "if": [["degree_ratio", "<=", 0.15], ["s_prior", "<=", 0.60]], "delta": -0.08}
+]
+}

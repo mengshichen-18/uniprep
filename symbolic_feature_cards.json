@@ -1,0 +1,408 @@
+{
+  "version": "v1",
+  "notes": "Feature semantic cards for GPT symbolic-spec generation. Definitions follow current 0410_feature code behavior. EM atom features are raw/unclipped; do not assume every EM atom is in [0,1].",
+  "features": {
+    "embedding_similarity": {
+      "definition": "EM grouped feature family for row-level embedding agreement.",
+      "formula": "expands_to=[row_emb_cosine,row_emb_l1_sim]",
+      "range": "group token",
+      "caution": "Group token; if replay provides atomic features, prefer atomic names directly."
+    },
+    "row_value_overlap": {
+      "definition": "EM grouped feature family for row value/token set overlap.",
+      "formula": "expands_to=[row_value_jaccard,row_value_containment_max,row_token_jaccard]",
+      "range": "group token",
+      "caution": "High values can still come from shared boilerplate values."
+    },
+    "row_profile": {
+      "definition": "EM grouped profile similarity on non-empty/numeric/length statistics.",
+      "formula": "expands_to=[row_nonempty_ratio,row_numeric_ratio_sim,row_avg_len_ratio]",
+      "range": "group token",
+      "caution": "Profile similarity is weak evidence without lexical/value overlap."
+    },
+    "serial_value_alignment": {
+      "definition": "EM grouped row-serialization alignment family (lexical + numeric overlap).",
+      "formula": "expands_to=[row_serial_token_jaccard,row_serial_edit_similarity,row_numeric_value_overlap]",
+      "range": "group token",
+      "caution": "Can overreact to formatting artifacts."
+    },
+    "ditto_proxy": {
+      "definition": "Deprecated alias of serial_value_alignment (kept for backward compatibility).",
+      "formula": "expands_to=[row_serial_token_jaccard,row_serial_edit_similarity,row_numeric_value_overlap]",
+      "range": "group token",
+      "caution": "Use serial_value_alignment in new prompts/configs."
+    },
+    "serial_lexical_plus": {
+      "definition": "EM grouped extra lexical separability features.",
+      "formula": "expands_to=[row_serial_char3_jaccard,row_serial_char4_jaccard,row_token_idf_jaccard,row_numeric_rel_diff_sim]",
+      "range": "group token",
+      "caution": "Character n-gram similarity may be high for templated strings."
+    },
+    "header_alignment": {
+      "definition": "EM grouped PromptEM-like schema/value alignment features.",
+      "formula": "expands_to=[row_header_jaccard,row_header_value_exact_ratio,row_header_token_jaccard]",
+      "range": "group token",
+      "caution": "Useful only when header cues are reliable in source data."
+    },
+    "jaccard_containment": {
+      "definition": "JTS grouped overlap score between column value sets.",
+      "formula": "expands_to=[jaccard,containment_max]",
+      "range": "group token",
+      "caution": "Directional containment is often more stable than plain jaccard."
+    },
+    "value_distribution": {
+      "definition": "JTS grouped token distribution similarity feature family.",
+      "formula": "expands_to=[value_distribution]",
+      "range": "group token",
+      "caution": "In current implementation this is header-token JS similarity, not full value histogram."
+    },
+    "overlap_coverage": {
+      "definition": "JTS grouped overlap coverage scores.",
+      "formula": "expands_to=[coverage_a,coverage_b,coverage_max]",
+      "range": "group token",
+      "caution": "Coverage can be unstable for tiny columns."
+    },
+    "value_profile": {
+      "definition": "JTS grouped column profile similarity.",
+      "formula": "expands_to=[unique_ratio_sim,numeric_ratio_sim,avg_len_ratio_sim]",
+      "range": "group token",
+      "caution": "Profile similarity alone does not guarantee joinability."
+    },
+    "header_similarity": {
+      "definition": "Grouped header lexical similarity.",
+      "formula": "expands_to=[header_token_jaccard,header_edit_similarity]",
+      "range": "group token",
+      "caution": "Header-only evidence is brittle; pair with value/overlap evidence."
+    },
+    "value_stats": {
+      "definition": "SM grouped value-statistic similarity family.",
+      "formula": "expands_to=[unique_ratio_sim,missing_ratio_sim,numeric_ratio_sim,avg_len_ratio_sim]",
+      "range": "group token",
+      "caution": "Sensitive to missing-value handling and small sample columns."
+    },
+    "value_overlap": {
+      "definition": "SM grouped value-set overlap family.",
+      "formula": "expands_to=[value_jaccard,value_containment_max]",
+      "range": "group token",
+      "caution": "Low overlap does not always imply mismatch for synonym-heavy domains."
+    },
+    "column_overlap": {
+      "definition": "UTS grouped directional column overlap family.",
+      "formula": "expands_to=[col_overlap_a2b_mean,col_overlap_b2a_mean,col_overlap_a2b_cov,col_overlap_b2a_cov]",
+      "range": "group token",
+      "caution": "Directional asymmetry matters; do not collapse blindly."
+    },
+    "header_jaccard": {
+      "definition": "UTS grouped header token overlap family.",
+      "formula": "expands_to=[header_jaccard]",
+      "range": "group token",
+      "caution": "Header overlap can be noisy for generic names (id, name, value)."
+    },
+    "table_size_ratio": {
+      "definition": "UTS grouped table size compatibility family.",
+      "formula": "expands_to=[col_count_ratio,row_count_ratio]",
+      "range": "group token",
+      "caution": "Size ratio should be weakly weighted; same semantics can exist at different scales."
+    },
+
+    "row_emb_cosine": {
+      "definition": "Cosine similarity of row embeddings.",
+      "formula": "dot(ea,eb)/(||ea||*||eb||)",
+      "range": "[-1,1] (raw cosine; not normalized to [0,1])",
+      "caution": "High cosine can be spurious for near-duplicate templates; value can be negative."
+    },
+    "row_emb_l1_sim": {
+      "definition": "Inverse L1 distance similarity of row embeddings.",
+      "formula": "1/(1+mean(abs(ea-eb)))",
+      "range": "[0,1] (formula gives (0,1]; pipeline fallback may emit 0)",
+      "caution": "Monotonic but non-linear; avoid over-interpreting absolute scale."
+    },
+    "row_value_jaccard": {
+      "definition": "Jaccard overlap of normalized row cell value sets.",
+      "formula": "|Va∩Vb|/|Va∪Vb|",
+      "range": "[0,1]",
+      "caution": "Affected by normalization and null filtering."
+    },
+    "row_value_containment_max": {
+      "definition": "Max directional containment between row value sets.",
+      "formula": "max(|Va∩Vb|/|Va|, |Va∩Vb|/|Vb|)",
+      "range": "[0,1]",
+      "caution": "Asymmetric containment can be informative; max discards direction."
+    },
+    "row_token_jaccard": {
+      "definition": "Token-level Jaccard overlap across row values.",
+      "formula": "|Ta∩Tb|/|Ta∪Tb|",
+      "range": "[0,1]",
+      "caution": "Can be inflated by common stop-like tokens."
+    },
+    "row_nonempty_ratio": {
+      "definition": "Similarity of non-empty cell counts between rows.",
+      "formula": "min(nonempty_a,nonempty_b)/max(nonempty_a,nonempty_b)",
+      "range": "[0,1]",
+      "caution": "Rows with very sparse values are noisy."
+    },
+    "row_numeric_ratio_sim": {
+      "definition": "Similarity of numeric-value ratios.",
+      "formula": "1-abs(num_ratio_a-num_ratio_b)",
+      "range": "[0,1]",
+      "caution": "Insensitive when both rows have low numeric density."
+    },
+    "row_avg_len_ratio": {
+      "definition": "Similarity of average cell string lengths.",
+      "formula": "min(avg_len_a,avg_len_b)/max(avg_len_a,avg_len_b)",
+      "range": "[0,1]",
+      "caution": "Length similarity is weak semantic evidence."
+    },
+    "row_serial_token_jaccard": {
+      "definition": "Token Jaccard on row serialization text.",
+      "formula": "|S_tok_a∩S_tok_b|/|S_tok_a∪S_tok_b|",
+      "range": "[0,1]",
+      "caution": "Sensitive to serialization/tokenization conventions."
+    },
+    "row_serial_edit_similarity": {
+      "definition": "Normalized edit similarity on serialized row text.",
+      "formula": "1-edit_distance(serial_a,serial_b)/max_len",
+      "range": "[0,1]",
+      "caution": "For long strings implementation may use char-gram proxy."
+    },
+    "row_numeric_value_overlap": {
+      "definition": "Max numeric value containment overlap between rows.",
+      "formula": "max(|Na∩Nb|/|Na|, |Na∩Nb|/|Nb|)",
+      "range": "[0,1]",
+      "caution": "Small numeric sets can make this unstable."
+    },
+    "row_serial_char3_jaccard": {
+      "definition": "Character 3-gram Jaccard on serialized row text.",
+      "formula": "|G3(a)∩G3(b)|/|G3(a)∪G3(b)|",
+      "range": "[0,1]",
+      "caution": "Can overfit formatting patterns."
+    },
+    "row_serial_char4_jaccard": {
+      "definition": "Character 4-gram Jaccard on serialized row text.",
+      "formula": "|G4(a)∩G4(b)|/|G4(a)∪G4(b)|",
+      "range": "[0,1]",
+      "caution": "More brittle than 3-gram for short strings."
+    },
+    "row_token_idf_jaccard": {
+      "definition": "IDF-weighted token Jaccard on row tokens.",
+      "formula": "sum_idf(intersection)/sum_idf(union)",
+      "range": "[0,1]",
+      "caution": "Depends on training-corpus IDF quality."
+    },
+    "row_numeric_rel_diff_sim": {
+      "definition": "Similarity from relative median numeric difference.",
+      "formula": "1/(1+abs(med_a-med_b)/max(|med_a|,|med_b|,1))",
+      "range": "[0,1] (set to 0 when either row has no numeric values)",
+      "caution": "Only informative when both rows have numeric values."
+    },
+    "row_header_jaccard": {
+      "definition": "Header-token Jaccard overlap between rows.",
+      "formula": "|Ha∩Hb|/|Ha∪Hb|",
+      "range": "[0,1]",
+      "caution": "Weak when headers are generic or inconsistent."
+    },
+    "row_header_value_exact_ratio": {
+      "definition": "Exact match ratio for shared headers' values.",
+      "formula": "exact_matches(shared_headers)/|shared_headers|",
+      "range": "[0,1]",
+      "caution": "Only works when header names align well."
+    },
+    "row_header_token_jaccard": {
+      "definition": "Jaccard over header:value token pairs.",
+      "formula": "|HV_a∩HV_b|/|HV_a∪HV_b|",
+      "range": "[0,1]",
+      "caution": "Can be sparse for short rows."
+    },
+
+    "jaccard": {
+      "definition": "Jaccard overlap of two column value sets.",
+      "formula": "|A∩B|/|A∪B|",
+      "range": "[0,1]",
+      "caution": "May underestimate relation for subset-like joins."
+    },
+    "containment_max": {
+      "definition": "Max directional containment between two column value sets.",
+      "formula": "max(|A∩B|/|A|, |A∩B|/|B|)",
+      "range": "[0,1]",
+      "caution": "Often more robust than jaccard in joinability."
+    },
+    "value_distribution": {
+      "definition": "Similarity from Jensen-Shannon on token distributions.",
+      "formula": "1 - JS(P_tokens_a, P_tokens_b)",
+      "range": "roughly [0,1]",
+      "caution": "Current code uses tokenized column names, not full value histograms."
+    },
+    "coverage_a": {
+      "definition": "Coverage of column A by overlap with B.",
+      "formula": "|A∩B|/|A|",
+      "range": "[0,1]",
+      "caution": "Very sensitive when |A| is tiny."
+    },
+    "coverage_b": {
+      "definition": "Coverage of column B by overlap with A.",
+      "formula": "|A∩B|/|B|",
+      "range": "[0,1]",
+      "caution": "Directional asymmetry carries useful signal."
+    },
+    "coverage_max": {
+      "definition": "Max directional coverage between two columns.",
+      "formula": "max(coverage_a,coverage_b)",
+      "range": "[0,1]",
+      "caution": "Max operation hides asymmetry."
+    },
+    "unique_ratio_sim": {
+      "definition": "Similarity of uniqueness ratios.",
+      "formula": "min(u_a,u_b)/max(u_a,u_b)",
+      "range": "[0,1]",
+      "caution": "Can be noisy on very small columns."
+    },
+    "numeric_ratio_sim": {
+      "definition": "Similarity of numeric fraction.",
+      "formula": "1-abs(num_ratio_a-num_ratio_b)",
+      "range": "[0,1]",
+      "caution": "A coarse profile feature; weak alone."
+    },
+    "avg_len_ratio_sim": {
+      "definition": "Similarity of average string lengths.",
+      "formula": "min(len_a,len_b)/max(len_a,len_b)",
+      "range": "[0,1]",
+      "caution": "Length can correlate with format rather than semantics."
+    },
+    "header_token_jaccard": {
+      "definition": "Jaccard similarity on header tokens.",
+      "formula": "|T(h_a)∩T(h_b)|/|T(h_a)∪T(h_b)|",
+      "range": "[0,1]",
+      "caution": "Sensitive to tokenization and naming style."
+    },
+    "header_edit_similarity": {
+      "definition": "Normalized edit similarity on raw header strings.",
+      "formula": "1-edit_distance(h_a,h_b)/max_len",
+      "range": "[0,1]",
+      "caution": "High for lexical variants that may still be semantically different."
+    },
+
+    "missing_ratio_sim": {
+      "definition": "Similarity of missing-value ratio between columns.",
+      "formula": "1-abs(miss_ratio_a-miss_ratio_b)",
+      "range": "[0,1]",
+      "caution": "Can dominate when data quality issues are shared."
+    },
+    "value_jaccard": {
+      "definition": "Jaccard overlap for schema-matching value sets.",
+      "formula": "|A∩B|/|A∪B|",
+      "range": "[0,1]",
+      "caution": "Low overlap may still happen for semantically matched columns."
+    },
+    "value_containment_max": {
+      "definition": "Max directional value containment for schema matching.",
+      "formula": "max(|A∩B|/|A|, |A∩B|/|B|)",
+      "range": "[0,1]",
+      "caution": "Containment is asymmetric; max compresses direction."
+    },
+
+    "col_overlap_a2b_mean": {
+      "definition": "Directional mean best-column overlap from table A to B.",
+      "formula": "mean_i max_j overlap(col_i^A,col_j^B)",
+      "range": "[0,1]",
+      "caution": "Can be high even when only subset of columns match strongly."
+    },
+    "col_overlap_b2a_mean": {
+      "definition": "Directional mean best-column overlap from table B to A.",
+      "formula": "mean_j max_i overlap(col_j^B,col_i^A)",
+      "range": "[0,1]",
+      "caution": "Use jointly with A->B direction to detect asymmetry."
+    },
+    "col_overlap_a2b_cov": {
+      "definition": "Directional coverage of strongly matched columns A->B.",
+      "formula": "fraction_i[max_j overlap(col_i^A,col_j^B) >= tau]",
+      "range": "[0,1]",
+      "caution": "Depends on threshold tau in implementation."
+    },
+    "col_overlap_b2a_cov": {
+      "definition": "Directional coverage of strongly matched columns B->A.",
+      "formula": "fraction_j[max_i overlap(col_j^B,col_i^A) >= tau]",
+      "range": "[0,1]",
+      "caution": "Interpret with its opposite direction together."
+    },
+    "header_jaccard": {
+      "definition": "Header token set Jaccard between two tables.",
+      "formula": "|H_a∩H_b|/|H_a∪H_b|",
+      "range": "[0,1]",
+      "caution": "Generic headers can inflate overlap."
+    },
+    "col_count_ratio": {
+      "definition": "Ratio similarity of number of columns.",
+      "formula": "min(cols_a,cols_b)/max(cols_a,cols_b)",
+      "range": "[0,1]",
+      "caution": "A structural prior; not semantic evidence by itself."
+    },
+    "row_count_ratio": {
+      "definition": "Ratio similarity of number of rows.",
+      "formula": "min(rows_a,rows_b)/max(rows_a,rows_b)",
+      "range": "[0,1]",
+      "caution": "Can vary due to sampling not semantics."
+    },
+
+    "s_prior": {
+      "definition": "Prior probability score from base model before symbolic correction.",
+      "formula": "sigmoid(base_logit)",
+      "range": "[0,1]",
+      "caution": "Already model-dependent; avoid overfitting symbolic rules to it."
+    },
+    "uncertainty": {
+      "definition": "Boundary uncertainty around 0.5 prior score.",
+      "formula": "1 - 2*abs(s_prior-0.5)",
+      "range": "[0,1]",
+      "caution": "High uncertainty means borderline, not necessarily wrong."
+    },
+    "src_degree": {
+      "definition": "Graph degree of source node for current candidate edge.",
+      "formula": "deg(src)",
+      "range": "non-negative",
+      "caution": "Scale differs strongly across datasets."
+    },
+    "dst_degree": {
+      "definition": "Graph degree of destination node for current candidate edge.",
+      "formula": "deg(dst)",
+      "range": "non-negative",
+      "caution": "Scale differs strongly across datasets."
+    },
+    "degree_ratio": {
+      "definition": "Symmetric degree compatibility ratio.",
+      "formula": "min(src_degree,dst_degree)/max(src_degree,dst_degree)",
+      "range": "[0,1]",
+      "caution": "Undefined at zero is mapped to 0 in implementation."
+    },
+    "gnn_score": {
+      "definition": "GNN predicted probability for the pair.",
+      "formula": "sigmoid(link_logit_raw)",
+      "range": "[0,1]",
+      "caution": "Do not use as sole symbolic feature to avoid degenerate identity mapping."
+    },
+
+    "overlap_mean_max": {
+      "definition": "Derived UTS feature: max of directional overlap means.",
+      "formula": "max(col_overlap_a2b_mean,col_overlap_b2a_mean)",
+      "range": "[0,1]",
+      "caution": "Suppresses directionality."
+    },
+    "overlap_cov_max": {
+      "definition": "Derived UTS feature: max of directional overlap coverages.",
+      "formula": "max(col_overlap_a2b_cov,col_overlap_b2a_cov)",
+      "range": "[0,1]",
+      "caution": "Suppresses directionality."
+    },
+    "overlap_direction_gap": {
+      "definition": "Derived UTS feature: directional gap of overlap means.",
+      "formula": "abs(col_overlap_a2b_mean-col_overlap_b2a_mean)",
+      "range": "[0,1]",
+      "caution": "Large gap can imply subset relation, not necessarily mismatch."
+    },
+    "size_balance": {
+      "definition": "Derived UTS feature: min structural size ratio.",
+      "formula": "min(col_count_ratio,row_count_ratio)",
+      "range": "[0,1]",
+      "caution": "Too strict thresholds may hurt recall."
+    }
+  }
+}

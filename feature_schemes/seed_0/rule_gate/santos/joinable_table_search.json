@@ -1,0 +1,9 @@
+{
+  "task": "joinable_table_search",
+  "version": 1,
+  "selected_features": ["s_prior", "uncertainty", "src_degree", "dst_degree", "degree_ratio"],
+  "rules": [
+  {"id": "jts_hi_prior", "if": [["s_prior", ">=", 0.65]], "delta": 0.06},
+  {"id": "jts_low_uncertain", "if": [["uncertainty", "<=", 0.35], ["s_prior", "<=", 0.40]], "delta": -0.05}
+]
+}

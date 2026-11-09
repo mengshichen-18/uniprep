@@ -1,0 +1,164 @@
+{
+  "task": "entity_matching",
+  "scope": "row_pair",
+  "version": "v1",
+  "features": [
+    {
+      "feature_name": "row_header_value_token_jaccard",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "1.0",
+      "description": "Jaccard overlap between header-aware value tokens, capturing alignment of field-specific content despite reordering.",
+      "inputs_used": [
+        "stats_a.header_value_token_set",
+        "stats_b.header_value_token_set",
+        "helpers.set_jaccard"
+      ],
+      "code": "def compute_feature(ctx):\n    stats_a = ctx[\"stats_a\"]\n    stats_b = ctx[\"stats_b\"]\n    helpers = ctx[\"helpers\"]\n    a = stats_a[\"header_value_token_set\"]\n    b = stats_b[\"header_value_token_set\"]\n    if not a and not b:\n        return 0.0\n    return helpers[\"set_jaccard\"](a, b)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_header_token_jaccard",
+        "row_value_jaccard"
+      ],
+      "code_hash": "59fd2ab175610b5fc72b379c6d7087f31248f6458d8e8da64891ba608dee7e71",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_header_value_pair_jaccard",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "1.0",
+      "description": "Jaccard similarity over exact header-to-value pairs, rewarding rows that match on the same field with the same normalized value.",
+      "inputs_used": [
+        "stats_a.header_to_value",
+        "stats_b.header_to_value",
+        "helpers.set_jaccard"
+      ],
+      "code": "def compute_feature(ctx):\n    helpers = ctx[\"helpers\"]\n    h2v_a = ctx[\"stats_a\"][\"header_to_value\"]\n    h2v_b = ctx[\"stats_b\"][\"header_to_value\"]\n    pairs_a = set()\n    pairs_b = set()\n    for k in h2v_a.keys():\n        v = h2v_a.get(k, \"\")\n        pairs_a.add(str(k) + \"=\" + str(v))\n    for k in h2v_b.keys():\n        v = h2v_b.get(k, \"\")\n        pairs_b.add(str(k) + \"=\" + str(v))\n    if not pairs_a and not pairs_b:\n        return 0.0\n    return helpers[\"set_jaccard\"](pairs_a, pairs_b)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_header_value_exact_ratio",
+        "row_value_jaccard"
+      ],
+      "code_hash": "179c68e974659f9c04448a267905a6577efda24fd73c24dbd11888b01e4b892f",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_token_overlap_coefficient",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "1.0",
+      "description": "Overlap coefficient on row token sets: intersection size normalized by the smaller set, robust to subset relationships.",
+      "inputs_used": [
+        "stats_a.token_set",
+        "stats_b.token_set"
+      ],
+      "code": "def compute_feature(ctx):\n    a = ctx[\"stats_a\"][\"token_set\"]\n    b = ctx[\"stats_b\"][\"token_set\"]\n    if not a or not b:\n        return 0.0\n    inter = len(a.intersection(b))\n    denom = float(min(len(a), len(b)))\n    if denom <= 0.0:\n        return 0.0\n    val = inter / denom\n    if val < 0.0:\n        return 0.0\n    if val > 1.0:\n        return 1.0\n    return float(val)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_token_jaccard"
+      ],
+      "code_hash": "c2f90eb2dcaffdc39735ecef0a63aab4f1ffa13dadb4df263df52b43619baba7",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_value_overlap_coefficient",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "1.0",
+      "description": "Overlap coefficient on normalized value sets: intersection normalized by the smaller set to capture near-containment.",
+      "inputs_used": [
+        "stats_a.value_set",
+        "stats_b.value_set"
+      ],
+      "code": "def compute_feature(ctx):\n    a = ctx[\"stats_a\"][\"value_set\"]\n    b = ctx[\"stats_b\"][\"value_set\"]\n    if not a or not b:\n        return 0.0\n    inter = len(a.intersection(b))\n    denom = float(min(len(a), len(b)))\n    if denom <= 0.0:\n        return 0.0\n    val = inter / denom\n    if val < 0.0:\n        return 0.0\n    if val > 1.0:\n        return 1.0\n    return float(val)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_value_jaccard",
+        "row_value_containment_max"
+      ],
+      "code_hash": "4a6d02fdf37a577898566c6eade1fabd802eb5d4aae94953c379da7ccc2600f7",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_serial_char_mix_jaccard",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "1.0",
+      "description": "Average of 3-gram and 4-gram character Jaccard on serialized rows, balancing robustness and precision to formatting.",
+      "inputs_used": [
+        "stats_a.serial_text",
+        "stats_b.serial_text",
+        "helpers.char_ngram_jaccard",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    helpers = ctx[\"helpers\"]\n    sa = ctx[\"stats_a\"][\"serial_text\"]\n    sb = ctx[\"stats_b\"][\"serial_text\"]\n    j3 = helpers[\"char_ngram_jaccard\"](sa, sb, 3)\n    j4 = helpers[\"char_ngram_jaccard\"](sa, sb, 4)\n    return helpers[\"clip01\"]((float(j3) + float(j4)) / 2.0)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_serial_char3_jaccard",
+        "row_serial_char4_jaccard"
+      ],
+      "code_hash": "a646ec28fd200bae880144fc57b7c0a62ee18f724492a16f69ca30d27906e0ef",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_nonempty_balance_smooth",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "1.0",
+      "description": "Smooth balance similarity of non-empty cell counts: 1 - |a-b|/(a+b), emphasizing comparable sparsity patterns.",
+      "inputs_used": [
+        "stats_a.nonempty_count",
+        "stats_b.nonempty_count"
+      ],
+      "code": "def compute_feature(ctx):\n    a = int(ctx[\"stats_a\"][\"nonempty_count\"])\n    b = int(ctx[\"stats_b\"][\"nonempty_count\"])\n    denom = float(max(a + b, 1))\n    diff = abs(a - b) / denom\n    val = 1.0 - float(diff)\n    if val < 0.0:\n        return 0.0\n    if val > 1.0:\n        return 1.0\n    return float(val)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_nonempty_ratio"
+      ],
+      "code_hash": "77a016ef0a7bdcf165bbef87d5806740007c1415a302097dafe14631884a2b87",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "feature_name": "row_emb_cosine01",
+      "task": "entity_matching",
+      "scope": "row_pair",
+      "version": "1.0",
+      "description": "Cosine similarity of row embeddings mapped to [0,1] via (cos+1)/2 to stabilize scale.",
+      "inputs_used": [
+        "emb_a",
+        "emb_b",
+        "helpers.cosine_similarity",
+        "helpers.clip01"
+      ],
+      "code": "def compute_feature(ctx):\n    cos = ctx[\"helpers\"][\"cosine_similarity\"](ctx[\"emb_a\"], ctx[\"emb_b\"])\n    val = (float(cos) + 1.0) / 2.0\n    return ctx[\"helpers\"][\"clip01\"](val)",
+      "fallback_value": 0.0,
+      "example_based_on": [
+        "row_emb_cosine"
+      ],
+      "code_hash": "d9a2be2ccc0fc4bc7467e7e3330bb6a7d00dd2a78b736f4a87c3ed8b8eb6e140",
+      "range_hint": [
+        0.0,
+        1.0
+      ]
+    }
+  ]
+}
